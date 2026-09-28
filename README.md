@@ -1,21 +1,81 @@
-# Deep Hedging Demo
-## Pricing Derivatives using Machine Learning
+# Deep Hedging — Thesis Implementation
 
-![Image of Demo](https://user-images.githubusercontent.com/7247589/99870023-ca5ec380-2b9d-11eb-8646-4e78ad87f8ad.png)
+This is my implementation of the deep hedging paper by Buehler et al. (2019) as part of my thesis work. The project explores using neural networks to learn optimal hedging strategies for options under realistic market conditions (transaction costs, discrete trading).
 
-``` 1) Jupyter version: Run ./colab/deep_hedging_colab.ipynb on Colab. ```
+The original repo is from [YuMan-Tam](https://github.com/YuMan-Tam/deep-hedging) — I've cleaned it up, fixed several bugs, and written a standalone runner script to make it easier to experiment with.
 
-``` 2) Gui version: Run python ./pyqt5/main.py Check ./requirements.txt for main dependencies.```
+---
 
-The Black-Scholes (BS) model – developed in 1973 and based on Nobel Prize winning works – has been the de-facto standard for pricing options and other financial derivatives for nearly half a century. The model can be used, under the assumption of a perfect financial market, to calculate an options price and the associated risk sensitivities. These risk sensitivities can then be theoretically used by a trader to create a perfect hedging strategy that eliminates all risks in a portfolio of options. However, the necessary conditions for a perfect financial market, such as zero transaction cost and the possibility of continuous trading, are difficult to meet in the real world. Therefore, in practice, banks have to rely on their traders’ intuition and experience to augment the BS model hedges with manual adjustments to account for these market imperfections.
-The derivative desks of every bank all hedge their positions, and their PnL and risk exposure depend crucially on the quality of their hedges. If their hedges does not properly account for market imperfections, banks might underestimate the true risk exposure of their portfolios. On the other hand, if their hedges overestimate the cost of market imperfections, banks might overprice their positions (relative to their competitors) and hence risk losing trades and/or customers. Over the last few decades, the financial market has become increasingly sophisticated. Intuition and experience of traders might not be sufficiently fast and accurate to compute the impact of market imperfections on their portfolios and to come up with good manual adjustments to their BS model hedges. 
+## What it does
 
-These limitations of the BS model are well-known, but neither academics nor practitioners have managed to develop alternatives to properly and systematically account for market frictions – at least not successful enough to be widely adopted by banks. Could machine learning (ML) be the cure? Last year, the Risk magazine reported that JP Morgan has begun to use machine learning to hedge (a.k.a. Deep Hedging) a portion of its vanilla index options flow book and plan to roll out the similar technology for single stocks, baskets and light exotics.  According to Risk.net (2019), the technology can create hedging strategies that “automatically factor in market fictions, such as transaction costs, liquidity constraints and risk limits”. More amazingly, the ML algorithm “far outperformed” hedging strategies derived from the BS model, and it could reduce the cost of hedging (in certain asset class) by “as much as 80%”. The technology has been heralded by some as “a breakthrough in quantitative finance, one that could mark the end of the Black-Scholes era.” Hence, it is not surprising that firms, such as Bank of America, Societe Generale and IBM, are reportedly developing their own ML-based system for derivative hedging.
+A bank sells a call option and needs to hedge its exposure by trading the underlying stock over 30 days. Black-Scholes gives a formula for the optimal hedge — but it assumes zero transaction costs and continuous trading. In reality both assumptions break down.
 
-Machine learning algorithms are often referred to as “black boxes” because of the inherent opaqueness and difficulties to inspect how an algorithm is able to accomplishing what is accomplishing. Buhler et al (2019) recently published a paper outlining the mechanism of this ground-breaking technology. We follow their outlined methodology to implement and replicate the “deep hedging” algorithm under different simulated market conditions. Given a distribution of the underlying assets and trader preference, the “deep hedging” algorithm attempts to identify the optimal hedge strategy (as a function of over 10k model parameters) that minimizes the residual risk of a hedged portfolio. We implement the “deep hedging” algorithm to demonstrate its potential benefit in a simplified yet sufficiently realistic setting. We first benchmark the deep hedging strategy against the classic Black-Scholes hedging strategy in a perfect world with no transaction cost, in which case the performance of both strategies should be similar. Then, we benchmark again in a world with market friction (i.e. non-zero transaction costs), in which case the deep hedging strategy should outperform the classic Black-Scholes hedging strategy. 
+Deep hedging trains a neural network to learn the hedging strategy directly from simulated market scenarios, with transaction costs included in the training objective. The result is a strategy that outperforms Black-Scholes when costs are present.
 
-**References:**
+---
 
-Risk.net, (2019). “Deep hedging and the end of the Black-Scholes era.”
+## Key results so far
 
-Hans Buhler et al, (2019). “Deep Hedging.” Quantitative Finance, 19(8).
+| Transaction cost (ε) | BS mean P&L | DH mean P&L | DH advantage |
+|---|---|---|---|
+| 0.00 (no costs) | ≈ 0 | ≈ 0 | None — both identical ✓ |
+| 0.01 (1% per trade) | ≈ −3.0 | ≈ −1.5 | **+£1.5 per option** |
+
+With zero costs, the network correctly learns to replicate the Black-Scholes delta (sanity check). With 1% costs, it learns a near-constant hedge position — trading as little as possible to avoid accumulated transaction costs.
+
+---
+
+## Setup
+
+**Requires Python 3.11** (not 3.12+, TensorFlow 2.13 has no wheel for newer versions).
+
+```bash
+# Create a virtual environment with Python 3.11
+py -3.11 -m venv venv
+venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+Then run:
+```bash
+python run_deep_hedging.py
+```
+
+Output saved to `results.png` in the same folder.
+
+---
+
+## Parameters (edit Section 1 of run_deep_hedging.py)
+
+| Parameter | Default | What it controls |
+|---|---|---|
+| `epsilon` | 0.01 | Transaction cost per trade (0 = frictionless) |
+| `sigma` | 0.2 | Stock volatility (20% annual) |
+| `K` | 100 | Strike price |
+| `N` | 30 | Number of trading days |
+| `Ktrain` | 100,000 | Number of simulated paths for training |
+| `loss_type` | "Entropy" | Risk measure: "Entropy" or "CVaR" |
+| `loss_param` | 1.0 | λ for Entropy (risk aversion), α for CVaR |
+| `epochs` | 200 | Training epochs |
+
+---
+
+## Bugs fixed from original repo
+
+The original notebook was written in 2021 and had a few issues running on modern Python/TF:
+
+- `is "string"` comparisons in `EuropeanCall.py` — always returned False in Python 3.11, causing silent wrong behaviour. Fixed to `== "string"`.
+- `delta_constraint` was only applied for `sigmoid`/`tanh` output activations, silently ignored with `linear`. Changed to `sigmoid`.
+- `@tf.function` caused indefinite hang on Windows with TF 2.13 and large functional models. Replaced with `model.compile` + `model.fit`.
+- `from_tensors` passed entire dataset as one batch. Fixed to `from_tensor_slices`.
+- `results.png` used a relative path that broke when VS Code changed the working directory. Fixed to absolute path via `__file__`.
+
+---
+
+## References
+
+- Buehler, H., Gonon, L., Hyer, T., & Wood, B. (2019). [Deep Hedging](https://arxiv.org/abs/1802.03042). *Quantitative Finance*.
+- Black, F., & Scholes, M. (1973). The Pricing of Options and Corporate Liabilities. *Journal of Political Economy*.
+- Whalley, A. E., & Wilmott, P. (1997). An Asymptotic Analysis of an Optimal Hedging Model for Option Pricing with Transaction Costs.

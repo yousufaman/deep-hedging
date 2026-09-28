@@ -12,7 +12,7 @@ class EuropeanCall:
 												dividend = None, K = None, exercise_date = None, calculation_date = None, \
 												day_count = None, dt = None, evaluation_method = "Numpy"):
 		
-		if evaluation_method is "QuantLib":
+		if evaluation_method == "QuantLib":
 			# For our purpose, assume all inputs are scalar.
 			stochastic_process = BlackScholesProcess(s0 = S, sigma = sigma, \
 												risk_free = risk_free, dividend = dividend, day_count=day_count)
@@ -23,13 +23,13 @@ class EuropeanCall:
 			exercise_date = ql.EuropeanExercise(exercise_date)
 			instrument = ql.VanillaOption(ql_payoff, exercise_date)
 
-			if type(self.process).__name__ is "BlackScholesProcess":
+			if type(self.process).__name__ == "BlackScholesProcess":
 				engine = ql.AnalyticEuropeanEngine(self.process.get_process(calculation_date))
 				
 			instrument.setPricingEngine(engine)
 			
 			return instrument.NPV()
-		elif evaluation_method is "Numpy":
+		elif evaluation_method == "Numpy":
 			# For our purpose, assume s0 is a NumPy array, other inputs are scalar.
 			T = np.arange(0, (exercise_date - calculation_date + 1))*dt
 			T = np.repeat(np.flip(T[None,:]), S.shape[0], 0)
@@ -45,7 +45,7 @@ class EuropeanCall:
 												dividend = None, K = None, exercise_date = None, calculation_date = None, \
 												day_count = None, dt = None, evaluation_method = "Numpy"):
 		
-		if evaluation_method is "QuantLib":
+		if evaluation_method == "QuantLib":
 			# For our purpose, assume all inputs are scalar.
 			stochastic_process = BlackScholesProcess(s0 = S, sigma = sigma, \
 												risk_free = risk_free, dividend = dividend, day_count=day_count)
@@ -56,13 +56,13 @@ class EuropeanCall:
 			exercise_date = ql.EuropeanExercise(exercise_date)
 			instrument = ql.VanillaOption(ql_payoff, exercise_date)
 
-			if type(self.process).__name__ is "BlackScholesProcess":
+			if type(self.process).__name__ == "BlackScholesProcess":
 				engine = ql.AnalyticEuropeanEngine(self.process.get_process(calculation_date))
 				
 			instrument.setPricingEngine(engine)
 			
 			return instrument.delta()
-		elif evaluation_method is "Numpy":
+		elif evaluation_method == "Numpy":
 			# For our purpose, assume s0 is a NumPy array, other inputs are scalar.
 			T = np.arange(0, (exercise_date - calculation_date + 1))*dt
 			T = np.repeat(np.flip(T[None,:]), S.shape[0], 0)
@@ -77,7 +77,7 @@ class EuropeanCall:
 												dividend = None, K = None, exercise_date = None, calculation_date = None, \
 												day_count = None, dt = None, evaluation_method = "Numpy"):
 		
-		if evaluation_method is "QuantLib":
+		if evaluation_method == "QuantLib":
 			# For our purpose, assume all inputs are scalar.
 			stochastic_process = BlackScholesProcess(s0 = S, sigma = sigma, \
 												risk_free = risk_free, dividend = dividend, day_count=day_count)
@@ -88,13 +88,13 @@ class EuropeanCall:
 			exercise_date = ql.EuropeanExercise(exercise_date)
 			instrument = ql.VanillaOption(ql_payoff, exercise_date)
 
-			if type(self.process).__name__ is "BlackScholesProcess":
+			if type(self.process).__name__ == "BlackScholesProcess":
 				engine = ql.AnalyticEuropeanEngine(self.process.get_process(calculation_date))
 				
 			instrument.setPricingEngine(engine)
 			
 			return instrument.vega()
-		elif evaluation_method is "Numpy":
+		elif evaluation_method == "Numpy":
 			# For our purpose, assume s0 is a NumPy array, other inputs are scalar.
 			T = np.arange(0, (exercise_date - calculation_date + 1))*dt
 			T = np.repeat(np.flip(T[None,:]), S.shape[0], 0)
